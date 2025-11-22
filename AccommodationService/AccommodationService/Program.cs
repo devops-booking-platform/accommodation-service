@@ -2,8 +2,6 @@ using System.Text;
 using AccommodationService.Configuration;
 using AccommodationService.Data;
 using AccommodationService.Infrastructure;
-using AccommodationService.Services;
-using AccommodationService.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -21,7 +19,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = jwtSettings.Issuer,      
+            ValidIssuer = jwtSettings.Issuer,
             ValidateAudience = true,
             ValidAudience = jwtSettings.Audience,
             ValidateIssuerSigningKey = true,
@@ -35,17 +33,13 @@ builder.Services.AddHttpContextAccessor();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-// TODO check
-// builder.Services.AddSwaggerGenWithAuth();
+builder.Services.AddSwaggerGenWithAuth();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// TODO check
-// builder.Services.AddUserServiceDependencies();
+builder.Services.AddUserServiceDependencies();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
-builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-
 
 builder.Services.AddAuthorization();
 var app = builder.Build();
@@ -65,6 +59,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

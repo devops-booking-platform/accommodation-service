@@ -2,6 +2,8 @@
 
 public class Amenity : EntityWithGuidId
 {
+    public const int NameMaxLength = 64;
+    public const int DescriptionMaxLength = 256;
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
 }

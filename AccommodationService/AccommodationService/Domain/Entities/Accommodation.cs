@@ -2,6 +2,8 @@
 
 public class Accommodation : EntityWithGuidId
 {
+    public const int NameMaxLength = 64;
+    public const int DescriptionMaxLength = 512;
     public string Name { get; set; } = string.Empty;
     public Guid LocationId { get; set; }
     public Guid HostId { get; set; }

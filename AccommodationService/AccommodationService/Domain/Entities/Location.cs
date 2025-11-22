@@ -2,6 +2,7 @@
 
 public class Location : EntityWithGuidId
 {
+    public const int StringFieldsMaxLength = 128;
     public string Country { get; set; } = string.Empty;
 
     public string City { get; set; } = string.Empty;

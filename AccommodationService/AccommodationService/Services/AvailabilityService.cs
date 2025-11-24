@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using AccommodationService.Common.Exceptions;
+﻿using AccommodationService.Common.Exceptions;
 using AccommodationService.Domain.DTOs;
 using AccommodationService.Domain.Entities;
 using AccommodationService.Repositories.Interfaces;
@@ -23,7 +22,7 @@ public class AvailabilityService(
 
         var accommodation = await accommodationRepository
             .GetByIdAsync(request.AccommodationId);
-        ValidateAccommodation(accommodation, userId);
+        ValidateAccommodation(accommodation, userId.Value);
 
         ValidateAvailability(request);
         
@@ -56,14 +55,14 @@ public class AvailabilityService(
         }
     }
 
-    private static void ValidateAccommodation(Accommodation? accommodation, [DisallowNull] Guid? userId)
+    private static void ValidateAccommodation(Accommodation? accommodation, Guid userId)
     {
         if (accommodation == null)
         {
             throw new NotFoundException("Accommodation does not exist.");
         }
 
-        if (accommodation.HostId != userId.Value)
+        if (accommodation.HostId != userId)
         {
             throw new UnauthorizedAccessException("You don't have access to this action.");
         }

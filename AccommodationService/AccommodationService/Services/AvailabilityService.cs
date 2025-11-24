@@ -1,4 +1,6 @@
-﻿using AccommodationService.Domain.DTOs;
+﻿using System.Diagnostics.CodeAnalysis;
+using AccommodationService.Common.Exceptions;
+using AccommodationService.Domain.DTOs;
 using AccommodationService.Domain.Entities;
 using AccommodationService.Repositories.Interfaces;
 using AccommodationService.Services.Interfaces;
@@ -11,8 +13,59 @@ public class AvailabilityService(
     ICurrentUserService currentUserService,
     IUnitOfWork unitOfWork) : IAvailabilityService
 {
-    public Task CreateOrUpdate(AvailabilityRequest request)
+    public async Task CreateOrUpdate(AvailabilityRequest request)
     {
-        throw new NotImplementedException();
+        var userId = currentUserService.UserId;
+        if (!userId.HasValue)
+        {
+            throw new UnauthorizedAccessException("You don't have access to this action.");
+        }
+
+        var accommodation = await accommodationRepository
+            .GetByIdAsync(request.AccommodationId);
+        ValidateAccommodation(accommodation, userId);
+
+        ValidateAvailability(request);
+        
+        if (request.Id.HasValue)
+        {
+            var availability = await availabilityRepository
+                .GetByIdAsync(request.Id.Value) ?? throw new NotFoundException("Availability does not exist.");
+
+            availability.Update(request);
+            return;
+        }
+
+        var newAvailability = Availability.Create(request);
+        await availabilityRepository.AddAsync(newAvailability);
+
+        await unitOfWork.SaveChangesAsync();
+    }
+
+    private void ValidateAvailability(AvailabilityRequest request)
+    {
+        var isOverlapping = availabilityRepository
+            .Query()
+            .Where(a => a.AccommodationId == request.AccommodationId)
+            .Where(a => request.Id == null || a.Id != request.Id)
+            .Any(a => (request.StartDate < a.EndDate && request.EndDate > a.StartDate));
+
+        if (isOverlapping)
+        {
+            throw new InvalidOperationException("Availability overlaps with existing intervals.");
+        }
+    }
+
+    private static void ValidateAccommodation(Accommodation? accommodation, [DisallowNull] Guid? userId)
+    {
+        if (accommodation == null)
+        {
+            throw new NotFoundException("Accommodation does not exist.");
+        }
+
+        if (accommodation.HostId != userId.Value)
+        {
+            throw new UnauthorizedAccessException("You don't have access to this action.");
+        }
     }
 }

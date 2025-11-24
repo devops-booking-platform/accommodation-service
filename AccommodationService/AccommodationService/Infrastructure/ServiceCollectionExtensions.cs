@@ -8,7 +8,7 @@ namespace AccommodationService.Infrastructure;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddUserServiceDependencies(this IServiceCollection services)
+    public static IServiceCollection AddAccommodationServiceDependencies(this IServiceCollection services)
     {
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));

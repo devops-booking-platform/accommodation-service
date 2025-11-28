@@ -12,4 +12,9 @@ public class Amenity : EntityWithGuidId
         Name = name;
         Description = description;
     }
+
+    public Amenity()
+    {
+        
+    }
 }

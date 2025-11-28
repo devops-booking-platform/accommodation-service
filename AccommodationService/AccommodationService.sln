@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccommodationService", "AccommodationService\AccommodationService.csproj", "{30558CCE-A318-4AFC-9DF8-16FEF0829743}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccommodationService.IntegrationTests", "AccommodationService.IntegrationTests\AccommodationService.IntegrationTests.csproj", "{F186614D-A6C2-48EE-8BD3-E4E96B485FE5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{30558CCE-A318-4AFC-9DF8-16FEF0829743}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{30558CCE-A318-4AFC-9DF8-16FEF0829743}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{30558CCE-A318-4AFC-9DF8-16FEF0829743}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F186614D-A6C2-48EE-8BD3-E4E96B485FE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F186614D-A6C2-48EE-8BD3-E4E96B485FE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F186614D-A6C2-48EE-8BD3-E4E96B485FE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F186614D-A6C2-48EE-8BD3-E4E96B485FE5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

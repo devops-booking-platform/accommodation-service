@@ -32,6 +32,7 @@ public class AvailabilityService(
                 .GetByIdAsync(request.Id.Value) ?? throw new NotFoundException("Availability does not exist.");
 
             availability.Update(request);
+            await unitOfWork.SaveChangesAsync();
             return;
         }
 

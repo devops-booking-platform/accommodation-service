@@ -36,5 +36,9 @@ public class AccommodationConfiguration : IEntityTypeConfiguration<Accommodation
             .WithOne(x => x.Accommodation)
             .HasForeignKey(x => x.AccommodationId)
             .OnDelete(DeleteBehavior.Cascade);
+        
+        builder.Property(x => x.PriceType)
+            .IsRequired()
+            .HasConversion<string>();
     }
 }

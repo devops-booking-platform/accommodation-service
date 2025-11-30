@@ -1,4 +1,5 @@
-﻿using AccommodationService.Domain.Entities;
+﻿using AccommodationService.Data.Seed;
+using AccommodationService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -15,5 +16,7 @@ public class AmenityConfiguration : IEntityTypeConfiguration<Amenity>
         builder.Property(p => p.Description)
             .IsRequired()
             .HasMaxLength(Amenity.DescriptionMaxLength);
+
+        builder.HasData(AmenitySeeding.Data);
     }
 }

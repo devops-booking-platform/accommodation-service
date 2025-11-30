@@ -14,6 +14,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IAccommodationService, Services.AccommodationService>();
+        services.AddScoped<IAvailabilityService, AvailabilityService>();
 
         return services;
     }

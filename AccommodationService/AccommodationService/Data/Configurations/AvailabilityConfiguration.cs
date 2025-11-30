@@ -8,7 +8,7 @@ public class AvailabilityConfiguration : IEntityTypeConfiguration<Availability>
 {
     public void Configure(EntityTypeBuilder<Availability> builder)
     {
-        builder.Property(p => p.PricePerNight)
+        builder.Property(p => p.Price)
             .IsRequired()
             .HasPrecision(12, 4);
 

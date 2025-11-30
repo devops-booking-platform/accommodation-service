@@ -1,4 +1,5 @@
 ﻿using AccommodationService.Domain.DTOs;
+using AccommodationService.Domain.Enums;
 
 namespace AccommodationService.Domain.Entities;
 
@@ -14,6 +15,7 @@ public class Accommodation : EntityWithGuidId
     public int MinimumNumberOfGuests { get; set; }
     public int MaximumNumberOfGuests { get; set; }
 
+    public PriceType PriceType { get; set; }
     public Location? Location { get; set; }
     public ICollection<Photo> Photos { get; set; } = new HashSet<Photo>();
     public ICollection<Amenity> Amenities { get; set; } = new HashSet<Amenity>();
@@ -32,9 +34,10 @@ public class Accommodation : EntityWithGuidId
             MaximumNumberOfGuests = request.MaximumNumberOfGuests,
             HostId = hostId,
             LocationId = location.Id,
-            Location = location
+            Location = location,
+            PriceType = request.PriceType
         };
-        
+
         location.AccommodationId = accommodation.Id;
 
         return accommodation;

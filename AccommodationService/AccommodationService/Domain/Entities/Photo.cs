@@ -8,7 +8,7 @@ public class Photo : EntityWithGuidId
     public Accommodation? Accommodation { get; set; }
 
     public static Photo Create(string url, Guid accommodationId) =>
-        new Photo
+        new()
         {
             Url = url,
             AccommodationId = accommodationId

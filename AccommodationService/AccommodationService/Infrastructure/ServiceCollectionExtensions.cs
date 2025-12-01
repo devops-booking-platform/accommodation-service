@@ -1,4 +1,6 @@
-﻿using AccommodationService.Repositories;
+﻿using AccommodationService.Common.Events;
+using AccommodationService.IntegrationEvents.Handlers;
+using AccommodationService.Repositories;
 using AccommodationService.Repositories.Interfaces;
 using AccommodationService.Services;
 using AccommodationService.Services.Interfaces;
@@ -15,6 +17,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IAccommodationService, Services.AccommodationService>();
         services.AddScoped<IAvailabilityService, AvailabilityService>();
+        services.AddScoped<IIntegrationEventDispatcher, IntegrationEventDispatcher>();
+
+        services.AddScoped<IIntegrationEventHandler<UserDeletedIntegrationEvent>, UserDeletedIntegrationEventHandler>();
+        services.AddScoped<IIntegrationEventHandler<ReservationCreatedIntegrationEvent>, ReservationCreatedIntegrationEventHandler>();
+
+        services.AddScoped<IRoutedIntegrationEventHandler, RoutedHandler<UserDeletedIntegrationEvent>>();
+        services.AddScoped<IRoutedIntegrationEventHandler, RoutedHandler<ReservationCreatedIntegrationEvent>>();
+
+        services.AddHostedService<IntegrationEventsSubscriber>();
 
         return services;
     }

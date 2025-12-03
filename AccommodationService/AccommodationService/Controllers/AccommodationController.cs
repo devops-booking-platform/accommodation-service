@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AccommodationService.Controllers;
 
-[Route("api/accommodation")]
+[Route("api/accommodations")]
 [ApiController]
 public class AccommodationController(IAccommodationService accommodationService) : ControllerBase
 {
@@ -15,5 +15,17 @@ public class AccommodationController(IAccommodationService accommodationService)
     {
         await accommodationService.Create(request);
         return StatusCode(StatusCodes.Status201Created);
+    }
+
+    [HttpGet("{id:guid}/reservation-info")]
+    public async Task<ActionResult<AccommodationReservationInfoResponseDTO>> GetReservationInfo(
+        [FromRoute] Guid id,
+        [FromQuery] DateOnly start,
+        [FromQuery] DateOnly end,
+        [FromQuery] int guests,
+        CancellationToken ct)
+    {
+        var dto = await accommodationService.GetReservationInfoAsync(id, start, end, guests, ct);
+        return Ok(dto);
     }
 }

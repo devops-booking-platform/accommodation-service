@@ -21,6 +21,9 @@ public class CustomWebApplicationFactory
 
         builder.ConfigureServices(services =>
         {
+            var hosted = services.SingleOrDefault(d => d.ImplementationType == typeof(IntegrationEventsSubscriber));
+            if (hosted != null)
+                services.Remove(hosted);
             // Remove real DB
             var descriptor = services.Single(d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
             services.Remove(descriptor);

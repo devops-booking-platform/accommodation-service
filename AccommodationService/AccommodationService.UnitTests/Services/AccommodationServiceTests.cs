@@ -11,7 +11,8 @@ public class AccommodationServiceTests
 {
     private readonly Mock<IRepository<Accommodation>> _accommodationRepoMock;
     private readonly Mock<IRepository<Amenity>> _amenityRepoMock;
-    private readonly Mock<IRepository<Photo>> _photoRepoMock;
+	private readonly Mock<IRepository<Availability>> _availabilityRepoMock;
+	private readonly Mock<IRepository<Photo>> _photoRepoMock;
     private readonly Mock<ICurrentUserService> _currentUserServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly AccommodationService.Services.AccommodationService _service;
@@ -20,6 +21,7 @@ public class AccommodationServiceTests
     {
         _accommodationRepoMock = new Mock<IRepository<Accommodation>>();
         _amenityRepoMock = new Mock<IRepository<Amenity>>();
+        _availabilityRepoMock = new Mock<IRepository<Availability>>();
         _photoRepoMock = new Mock<IRepository<Photo>>();
         _currentUserServiceMock = new Mock<ICurrentUserService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
@@ -27,7 +29,8 @@ public class AccommodationServiceTests
         _service = new AccommodationService.Services.AccommodationService(
             _accommodationRepoMock.Object,
             _amenityRepoMock.Object,
-            _photoRepoMock.Object,
+			_photoRepoMock.Object,
+			_availabilityRepoMock.Object,
             _currentUserServiceMock.Object,
             _unitOfWorkMock.Object
         );

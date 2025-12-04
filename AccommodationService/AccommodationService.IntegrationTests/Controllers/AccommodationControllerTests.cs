@@ -33,7 +33,7 @@ public class AccommodationControllerTests(CustomWebApplicationFactory factory)
             Photos = new List<string> { "photo1.jpg", "photo2.jpg" }
         };
 
-        var response = await _client.PostAsJsonAsync("/api/accommodation", request);
+        var response = await _client.PostAsJsonAsync("/api/accommodations", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 

@@ -20,12 +20,20 @@ public class AccommodationController(IAccommodationService accommodationService)
     [HttpGet("{id:guid}/reservation-info")]
     public async Task<ActionResult<AccommodationReservationInfoResponseDTO>> GetReservationInfo(
         [FromRoute] Guid id,
-        [FromQuery] DateOnly start,
-        [FromQuery] DateOnly end,
+        [FromQuery] DateTimeOffset start,
+        [FromQuery] DateTimeOffset end,
         [FromQuery] int guests,
         CancellationToken ct)
     {
         var dto = await accommodationService.GetReservationInfoAsync(id, start, end, guests, ct);
         return Ok(dto);
     }
+
+	[HttpGet("my")]
+	[Authorize(Roles = "Host")]
+	public async Task<IActionResult> GetMy(CancellationToken ct)
+	{
+		var list = await accommodationService.GetMyAsync(ct);
+		return Ok(list);
+	}
 }

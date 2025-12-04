@@ -48,8 +48,8 @@ public class AccommodationService(
 
     public async Task<AccommodationReservationInfoResponseDTO> GetReservationInfoAsync(
         Guid accommodationId,
-        DateOnly start,
-        DateOnly end,
+		DateTimeOffset start,
+		DateTimeOffset end,
         int guests,
         CancellationToken ct = default)
     {
@@ -78,7 +78,7 @@ public class AccommodationService(
             TotalPrice: totalPrice
         );
     }
-    private Task<bool> IsIntervalAvailableAsync(Guid accommodationId, DateOnly startDate, DateOnly endDate, CancellationToken ct = default)
+    private Task<bool> IsIntervalAvailableAsync(Guid accommodationId, DateTimeOffset startDate, DateTimeOffset endDate, CancellationToken ct = default)
     {
         return availabilityRepository.Query()
             .AnyAsync(a =>
@@ -87,4 +87,26 @@ public class AccommodationService(
                 a.EndDate >= endDate,
                 ct);
     }
+
+	public async Task<IReadOnlyList<HostAccommodationListItemDTO>> GetMyAsync(CancellationToken ct)
+	{
+		var userId = currentUserService.UserId;
+		if (!userId.HasValue)
+		{
+			throw new UnauthorizedAccessException("You don't have access to this action.");
+		}
+		return await accommodationRepository.Query()
+		.Where(x => x.HostId == userId.Value)
+		.Select(x => new HostAccommodationListItemDTO
+		{
+			Id = x.Id,
+			Name = x.Name,
+			Address = x.Location == null
+				? ""
+				: $"{x.Location.City}, {x.Location.Country}, {x.Location.Address}",
+			MinGuests = x.MinimumNumberOfGuests,
+			MaxGuests = x.MaximumNumberOfGuests
+		})
+		.ToListAsync(ct);
+	}
 }

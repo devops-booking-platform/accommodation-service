@@ -1,11 +1,11 @@
 version: "3.9"
 
 services:
-  accomodation-service:
+  accommodation-service:
     build:
       context: ./AccommodationService/AccommodationService
       dockerfile: Dockerfile
-    container_name: accomodation-service
+    container_name: accommodation-service
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
 

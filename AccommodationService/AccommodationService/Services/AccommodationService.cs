@@ -1,4 +1,5 @@
-﻿using AccommodationService.Common.Exceptions;
+﻿using AccommodationService.Common.Events;
+using AccommodationService.Common.Exceptions;
 using AccommodationService.Domain.DTOs;
 using AccommodationService.Domain.Entities;
 using AccommodationService.Repositories.Interfaces;
@@ -14,7 +15,8 @@ public class AccommodationService(
     IRepository<Availability> availabilityRepository,
 
     ICurrentUserService currentUserService,
-    IUnitOfWork unitOfWork) : IAccommodationService
+    IUnitOfWork unitOfWork,
+    IEventBus eventBus) : IAccommodationService
 {
     public async Task Create(AccommodationRequest request)
     {
@@ -33,6 +35,21 @@ public class AccommodationService(
         await accommodationRepository.AddAsync(accommodation);
         await photoRepository.AddRangeAsync(photos);
         await unitOfWork.SaveChangesAsync();
+        var location = new LocationDTO
+        {
+            Address = accommodation.Location.Address,
+            City = accommodation.Location.City,
+            Country = accommodation.Location.Country,
+            PostalCode = accommodation.Location.PostalCode
+        };
+        var amenities = accommodation.Amenities.Select(a => new AmenityDTO
+        {
+            Description = a.Description,
+            Name = a.Name,
+        }).ToList();
+
+        var @event = new AccommodationCreatedEvent(accommodation.Id, accommodation.Name, accommodation.MaximumNumberOfGuests, accommodation.MinimumNumberOfGuests, amenities, location);
+        await eventBus.PublishAsync(@event);
     }
 
     private static List<Photo> CreatePhotos(AccommodationRequest request, Accommodation accommodation)

@@ -35,23 +35,35 @@ public class AccommodationService(
         await accommodationRepository.AddAsync(accommodation);
         await photoRepository.AddRangeAsync(photos);
         await unitOfWork.SaveChangesAsync();
-        var location = new LocationDTO
+        var @event = new AccommodationCreatedEvent(
+        accommodation.Id,
+        accommodation.Name,
+        accommodation.MaximumNumberOfGuests,
+        accommodation.MinimumNumberOfGuests,
+        MapAmenities(accommodation),
+        MapLocation(accommodation)
+    );
+        await eventBus.PublishAsync(@event);
+    }
+    private static LocationDTO? MapLocation(Accommodation accommodation)
+    => accommodation.Location is null
+        ? null
+        : new LocationDTO
         {
             Address = accommodation.Location.Address,
             City = accommodation.Location.City,
             Country = accommodation.Location.Country,
             PostalCode = accommodation.Location.PostalCode
         };
-        var amenities = accommodation.Amenities.Select(a => new AmenityDTO
-        {
-            Description = a.Description,
-            Name = a.Name,
-        }).ToList();
 
-        var @event = new AccommodationCreatedEvent(accommodation.Id, accommodation.Name, accommodation.MaximumNumberOfGuests, accommodation.MinimumNumberOfGuests, amenities, location);
-        await eventBus.PublishAsync(@event);
-    }
-
+    private static List<AmenityDTO> MapAmenities(Accommodation accommodation)
+        => accommodation.Amenities
+            .Select(a => new AmenityDTO
+            {
+                Name = a.Name,
+                Description = a.Description
+            })
+            .ToList();
     private static List<Photo> CreatePhotos(AccommodationRequest request, Accommodation accommodation)
         => request.Photos.Select(photo => Photo.Create(photo, accommodation.Id)).ToList();
 

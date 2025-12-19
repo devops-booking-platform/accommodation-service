@@ -1,4 +1,5 @@
-﻿using AccommodationService.Data;
+﻿using AccommodationService.Common.Events;
+using AccommodationService.Data;
 using AccommodationService.Domain.Entities;
 using AccommodationService.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
@@ -27,6 +28,8 @@ public class CustomWebApplicationFactory
             // Remove real DB
             var descriptor = services.Single(d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
             services.Remove(descriptor);
+            services.RemoveAll<IEventBus>();
+            services.AddSingleton<IEventBus, NoOpEventBus>();
 
             // Add in-memory DB
             services.AddDbContext<ApplicationDbContext>(options =>

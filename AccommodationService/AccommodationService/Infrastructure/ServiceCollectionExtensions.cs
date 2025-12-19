@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRoutedIntegrationEventHandler, RoutedHandler<ReservationCreatedIntegrationEvent>>();
 
         services.AddHostedService<IntegrationEventsSubscriber>();
+        services.AddSingleton<IEventBus, RabbitMqEventBus>();
 
         return services;
     }

@@ -1,4 +1,5 @@
-﻿using AccommodationService.Domain.DTOs;
+﻿using AccommodationService.Common.Events;
+using AccommodationService.Domain.DTOs;
 using AccommodationService.Domain.Entities;
 using AccommodationService.Domain.Enums;
 using AccommodationService.Repositories.Interfaces;
@@ -15,6 +16,8 @@ public class AccommodationServiceTests
 	private readonly Mock<IRepository<Photo>> _photoRepoMock;
     private readonly Mock<ICurrentUserService> _currentUserServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IEventBus> _eventBusMock;
+
     private readonly AccommodationService.Services.AccommodationService _service;
 
     public AccommodationServiceTests()
@@ -25,6 +28,8 @@ public class AccommodationServiceTests
         _photoRepoMock = new Mock<IRepository<Photo>>();
         _currentUserServiceMock = new Mock<ICurrentUserService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _eventBusMock = new Mock<IEventBus>();
+
 
         _service = new AccommodationService.Services.AccommodationService(
             _accommodationRepoMock.Object,
@@ -32,7 +37,8 @@ public class AccommodationServiceTests
 			_photoRepoMock.Object,
 			_availabilityRepoMock.Object,
             _currentUserServiceMock.Object,
-            _unitOfWorkMock.Object
+            _unitOfWorkMock.Object,
+            _eventBusMock.Object
         );
     }
 

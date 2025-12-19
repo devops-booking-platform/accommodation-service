@@ -1,4 +1,5 @@
-﻿using AccommodationService.Common.Exceptions;
+﻿using AccommodationService.Common.Events;
+using AccommodationService.Common.Exceptions;
 using AccommodationService.Domain.DTOs;
 using AccommodationService.Domain.Entities;
 using AccommodationService.Repositories.Interfaces;
@@ -12,17 +13,16 @@ public class AccommodationService(
     IRepository<Amenity> amenityRepository,
     IRepository<Photo> photoRepository,
     IRepository<Availability> availabilityRepository,
-
     ICurrentUserService currentUserService,
-    IUnitOfWork unitOfWork) : IAccommodationService
+    IUnitOfWork unitOfWork,
+    IEventBus eventBus
+) : IAccommodationService
 {
     public async Task Create(AccommodationRequest request)
     {
         var userId = currentUserService.UserId;
         if (!userId.HasValue)
-        {
             throw new UnauthorizedAccessException("You don't have access to this action.");
-        }
 
         var accommodation = Accommodation.Create(request, userId.Value);
 
@@ -32,24 +32,59 @@ public class AccommodationService(
 
         await accommodationRepository.AddAsync(accommodation);
         await photoRepository.AddRangeAsync(photos);
+
         await unitOfWork.SaveChangesAsync();
+
+        var @event = new AccommodationCreatedEvent(
+            accommodation.Id,
+            accommodation.Name,
+            accommodation.MaximumNumberOfGuests,
+            accommodation.MinimumNumberOfGuests,
+            MapAmenities(accommodation),
+            MapLocation(accommodation)
+        );
+
+        await eventBus.PublishAsync(@event);
     }
 
+    private static LocationDTO? MapLocation(Accommodation accommodation)
+        => accommodation.Location is null
+            ? null
+            : new LocationDTO
+            {
+                Address = accommodation.Location.Address,
+                City = accommodation.Location.City,
+                Country = accommodation.Location.Country,
+                PostalCode = accommodation.Location.PostalCode
+            };
+
+    private static List<AmenityDTO> MapAmenities(Accommodation accommodation)
+        => accommodation.Amenities
+            .Select(a => new AmenityDTO
+            {
+                Name = a.Name,
+                Description = a.Description
+            })
+            .ToList();
+
     private static List<Photo> CreatePhotos(AccommodationRequest request, Accommodation accommodation)
-        => request.Photos.Select(photo => Photo.Create(photo, accommodation.Id)).ToList();
+        => request.Photos
+            .Select(photo => Photo.Create(photo, accommodation.Id))
+            .ToList();
 
     private async Task GetAmenities(AccommodationRequest request, Accommodation accommodation)
     {
         var amenities = await amenityRepository.Query()
             .Where(x => request.Amenities.Contains(x.Id))
             .ToListAsync();
+
         accommodation.Amenities = amenities;
     }
 
     public async Task<AccommodationReservationInfoResponseDTO> GetReservationInfoAsync(
         Guid accommodationId,
-		DateTimeOffset start,
-		DateTimeOffset end,
+        DateTimeOffset start,
+        DateTimeOffset end,
         int guests,
         CancellationToken ct = default)
     {
@@ -59,7 +94,8 @@ public class AccommodationService(
         if (guests <= 0)
             throw new ArgumentOutOfRangeException(nameof(guests), "Guests must be positive.");
 
-        var accommodation = await accommodationRepository.GetByIdAsync(accommodationId) ?? throw new NotFoundException("Accommodation not found.");
+        var accommodation = await accommodationRepository.GetByIdAsync(accommodationId)
+            ?? throw new NotFoundException("Accommodation not found.");
 
         if (guests > accommodation.MaximumNumberOfGuests)
             throw new ConflictException("Guests exceed max capacity.");
@@ -78,7 +114,12 @@ public class AccommodationService(
             TotalPrice: totalPrice
         );
     }
-    private Task<bool> IsIntervalAvailableAsync(Guid accommodationId, DateTimeOffset startDate, DateTimeOffset endDate, CancellationToken ct = default)
+
+    private Task<bool> IsIntervalAvailableAsync(
+        Guid accommodationId,
+        DateTimeOffset startDate,
+        DateTimeOffset endDate,
+        CancellationToken ct = default)
     {
         return availabilityRepository.Query()
             .AnyAsync(a =>
@@ -88,25 +129,24 @@ public class AccommodationService(
                 ct);
     }
 
-	public async Task<IReadOnlyList<HostAccommodationListItemDTO>> GetMyAsync(CancellationToken ct)
-	{
-		var userId = currentUserService.UserId;
-		if (!userId.HasValue)
-		{
-			throw new UnauthorizedAccessException("You don't have access to this action.");
-		}
-		return await accommodationRepository.Query()
-		.Where(x => x.HostId == userId.Value)
-		.Select(x => new HostAccommodationListItemDTO
-		{
-			Id = x.Id,
-			Name = x.Name,
-			Address = x.Location == null
-				? ""
-				: $"{x.Location.City}, {x.Location.Country}, {x.Location.Address}",
-			MinGuests = x.MinimumNumberOfGuests,
-			MaxGuests = x.MaximumNumberOfGuests
-		})
-		.ToListAsync(ct);
-	}
+    public async Task<IReadOnlyList<HostAccommodationListItemDTO>> GetMyAsync(CancellationToken ct)
+    {
+        var userId = currentUserService.UserId;
+        if (!userId.HasValue)
+            throw new UnauthorizedAccessException("You don't have access to this action.");
+
+        return await accommodationRepository.Query()
+            .Where(x => x.HostId == userId.Value)
+            .Select(x => new HostAccommodationListItemDTO
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Address = x.Location == null
+                    ? ""
+                    : $"{x.Location.City}, {x.Location.Country}, {x.Location.Address}",
+                MinGuests = x.MinimumNumberOfGuests,
+                MaxGuests = x.MaximumNumberOfGuests
+            })
+            .ToListAsync(ct);
+    }
 }

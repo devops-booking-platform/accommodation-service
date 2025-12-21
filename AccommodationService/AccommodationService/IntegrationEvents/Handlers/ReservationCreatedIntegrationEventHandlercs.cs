@@ -1,4 +1,5 @@
 ﻿using AccommodationService.Common.Events;
+using AccommodationService.Common.Events.Received;
 
 namespace AccommodationService.IntegrationEvents.Handlers
 {

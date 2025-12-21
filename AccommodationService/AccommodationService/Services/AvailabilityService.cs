@@ -1,4 +1,6 @@
-﻿using AccommodationService.Common.Exceptions;
+﻿using AccommodationService.Common.Events;
+using AccommodationService.Common.Events.Published;
+using AccommodationService.Common.Exceptions;
 using AccommodationService.Domain.DTOs;
 using AccommodationService.Domain.Entities;
 using AccommodationService.Repositories.Interfaces;
@@ -10,7 +12,8 @@ public class AvailabilityService(
     IRepository<Availability> availabilityRepository,
     IRepository<Accommodation> accommodationRepository,
     ICurrentUserService currentUserService,
-    IUnitOfWork unitOfWork) : IAvailabilityService
+    IUnitOfWork unitOfWork,
+    IEventBus eventBus) : IAvailabilityService
 {
     public async Task CreateOrUpdate(AvailabilityRequest request)
     {
@@ -33,6 +36,7 @@ public class AvailabilityService(
 
             availability.Update(request);
             await unitOfWork.SaveChangesAsync();
+            await PublishAvailabilityUpsertedAsync(request.AccommodationId, availability);
             return;
         }
 
@@ -40,6 +44,21 @@ public class AvailabilityService(
         await availabilityRepository.AddAsync(newAvailability);
 
         await unitOfWork.SaveChangesAsync();
+        await PublishAvailabilityUpsertedAsync(request.AccommodationId, newAvailability);
+    }
+
+    private async Task PublishAvailabilityUpsertedAsync(
+    Guid accommodationId,
+    Availability availability)
+    {
+        var @event = new AvailabilityUpsertedIntegrationEvent(
+            accommodationId,
+            availability.Id,
+            availability.StartDate,
+            availability.EndDate,
+            availability.Price);
+
+        await eventBus.PublishAsync(@event);
     }
 
     private void ValidateAvailability(AvailabilityRequest request)

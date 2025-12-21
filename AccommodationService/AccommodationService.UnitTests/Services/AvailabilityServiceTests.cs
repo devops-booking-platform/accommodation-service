@@ -1,4 +1,5 @@
-﻿using AccommodationService.Common.Exceptions;
+﻿using AccommodationService.Common.Events;
+using AccommodationService.Common.Exceptions;
 using AccommodationService.Domain.DTOs;
 using AccommodationService.Domain.Entities;
 using AccommodationService.Repositories.Interfaces;
@@ -15,6 +16,8 @@ public class AvailabilityServiceTests
     private readonly Mock<IRepository<Accommodation>> _accommodationRepoMock;
     private readonly Mock<ICurrentUserService> _currentUserServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IEventBus> _eventBusMock;
+
     private readonly AvailabilityService _service;
 
     public AvailabilityServiceTests()
@@ -23,12 +26,14 @@ public class AvailabilityServiceTests
         _accommodationRepoMock = new Mock<IRepository<Accommodation>>();
         _currentUserServiceMock = new Mock<ICurrentUserService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _eventBusMock = new Mock<IEventBus>();
 
         _service = new AvailabilityService(
             _availabilityRepoMock.Object,
             _accommodationRepoMock.Object,
             _currentUserServiceMock.Object,
-            _unitOfWorkMock.Object
+            _unitOfWorkMock.Object,
+            _eventBusMock.Object
         );
     }
 

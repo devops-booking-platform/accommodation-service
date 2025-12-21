@@ -1,4 +1,5 @@
 ﻿using AccommodationService.Common.Events;
+using AccommodationService.Common.Events.Received;
 using AccommodationService.Configuration;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
@@ -58,7 +59,7 @@ public sealed class IntegrationEventsSubscriber : BackgroundService
 
         await _channel.BasicQosAsync(0, prefetchCount: 1, global: false, cancellationToken: stoppingToken);
 
-        await _channel.QueueBindAsync(QueueName, _settings.Exchange, nameof(UserDeletedIntegrationEvent), cancellationToken: stoppingToken);
+        await _channel.QueueBindAsync(QueueName, _settings.Exchange, nameof(HostDeletedIntegrationEvent), cancellationToken: stoppingToken);
         await _channel.QueueBindAsync(QueueName, _settings.Exchange, nameof(ReservationCreatedIntegrationEvent), cancellationToken: stoppingToken);
 
         var consumer = new AsyncEventingBasicConsumer(_channel);

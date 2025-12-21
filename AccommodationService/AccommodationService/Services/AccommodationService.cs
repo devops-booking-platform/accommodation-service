@@ -1,4 +1,5 @@
 ﻿using AccommodationService.Common.Events;
+using AccommodationService.Common.Events.Published;
 using AccommodationService.Common.Exceptions;
 using AccommodationService.Domain.DTOs;
 using AccommodationService.Domain.Entities;
@@ -35,7 +36,7 @@ public class AccommodationService(
 
         await unitOfWork.SaveChangesAsync();
 
-        var @event = new AccommodationCreatedEvent(
+        var @event = new AccommodationCreatedIntegrationEvent(
             accommodation.Id,
             accommodation.Name,
             accommodation.MaximumNumberOfGuests,
@@ -148,5 +149,27 @@ public class AccommodationService(
                 MaxGuests = x.MaximumNumberOfGuests
             })
             .ToListAsync(ct);
+    }
+
+    public async Task DeleteHostAccommodationsAsync(Guid hostId, CancellationToken ct)
+    {
+
+        var accommodationIds = await accommodationRepository
+        .Query()
+        .Where(a => a.HostId == hostId)
+        .Select(a => a.Id)
+        .ToListAsync(ct);
+
+        if (accommodationIds.Count == 0)
+            return;
+
+        await accommodationRepository
+            .Query()
+            .Where(a => a.HostId == hostId)
+            .ExecuteDeleteAsync(ct);
+
+        await eventBus.PublishAsync(
+            new HostAccommodationsDeletedIntegrationEvent(accommodationIds),
+            ct);
     }
 }

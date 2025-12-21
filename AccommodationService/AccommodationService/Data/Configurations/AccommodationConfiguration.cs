@@ -31,7 +31,7 @@ public class AccommodationConfiguration : IEntityTypeConfiguration<Accommodation
             .WithOne(x => x.Accommodation)
             .HasForeignKey(x => x.AccommodationId)
             .OnDelete(DeleteBehavior.Cascade);
-
+            
         builder.HasMany(x => x.Availabilities)
             .WithOne(x => x.Accommodation)
             .HasForeignKey(x => x.AccommodationId)

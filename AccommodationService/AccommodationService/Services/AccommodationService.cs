@@ -3,6 +3,7 @@ using AccommodationService.Common.Events.Published;
 using AccommodationService.Common.Exceptions;
 using AccommodationService.Domain.DTOs;
 using AccommodationService.Domain.Entities;
+using AccommodationService.Domain.Enums;
 using AccommodationService.Repositories.Interfaces;
 using AccommodationService.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -42,7 +43,8 @@ public class AccommodationService(
             accommodation.MaximumNumberOfGuests,
             accommodation.MinimumNumberOfGuests,
             MapAmenities(accommodation),
-            MapLocation(accommodation)
+            MapLocation(accommodation),
+            accommodation.PriceType
         );
 
         await eventBus.PublishAsync(@event);
@@ -101,11 +103,7 @@ public class AccommodationService(
         if (guests > accommodation.MaximumNumberOfGuests)
             throw new ConflictException("Guests exceed max capacity.");
 
-        var isCoveredByAvailability = await IsIntervalAvailableAsync(accommodationId, start, end, ct);
-        if (!isCoveredByAvailability)
-            throw new ConflictException("Accommodation is not available for the selected dates.");
-
-        var totalPrice = 100;
+        var totalPrice = await CalculateTotalPriceAsync(accommodationId, accommodation.PriceType, start, end, guests, ct);
 
         return new AccommodationReservationInfoResponseDTO(
             Name: accommodation.Name,
@@ -116,19 +114,105 @@ public class AccommodationService(
         );
     }
 
-    private Task<bool> IsIntervalAvailableAsync(
-        Guid accommodationId,
-        DateTimeOffset startDate,
-        DateTimeOffset endDate,
-        CancellationToken ct = default)
+    private static (DateTimeOffset StartUtc, DateTimeOffset EndUtc) NormalizeToUtcMidnights(
+        DateTimeOffset start,
+        DateTimeOffset end)
     {
-        return availabilityRepository.Query()
-            .AnyAsync(a =>
-                a.AccommodationId == accommodationId &&
-                a.StartDate <= startDate &&
-                a.EndDate >= endDate,
-                ct);
+        var startUtc = start.ToUniversalTime();
+        var endUtc = end.ToUniversalTime();
+
+        var startMidnightUtc = new DateTimeOffset(
+            startUtc.Year, startUtc.Month, startUtc.Day, 0, 0, 0, TimeSpan.Zero);
+
+        var endMidnightUtc = new DateTimeOffset(
+            endUtc.Year, endUtc.Month, endUtc.Day, 0, 0, 0, TimeSpan.Zero);
+
+        if (endMidnightUtc <= startMidnightUtc)
+            throw new ArgumentOutOfRangeException(nameof(end), "End date must be after start date.");
+
+        return (startMidnightUtc, endMidnightUtc);
     }
+
+    private async Task<decimal> CalculateTotalPriceAsync(
+        Guid accommodationId,
+        PriceType priceType,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        int guests,
+        CancellationToken ct)
+    {
+        if (guests <= 0)
+            throw new ArgumentOutOfRangeException(nameof(guests), "Guests must be positive.");
+
+        var (startUtc, endUtc) = NormalizeToUtcMidnights(start, end);
+
+        var intervals = await availabilityRepository.Query()
+            .AsNoTracking()
+            .Where(a => a.AccommodationId == accommodationId)
+            .Where(a => a.EndDate > startUtc && a.StartDate < endUtc) 
+            .Select(a => new { a.StartDate, a.EndDate, a.Price })
+            .ToListAsync(ct);
+
+        if (intervals.Count == 0)
+            throw new ConflictException("Accommodation is not available for the selected dates.");
+
+        var startDay = DateOnly.FromDateTime(startUtc.UtcDateTime);
+        var endDay = DateOnly.FromDateTime(endUtc.UtcDateTime);
+
+        var dayIntervals = intervals
+            .Select(x => new
+            {
+                StartDay = DateOnly.FromDateTime(x.StartDate.UtcDateTime),
+                EndDay = DateOnly.FromDateTime(x.EndDate.UtcDateTime),
+                x.Price
+            })
+            .Where(x => x.EndDay > startDay && x.StartDay < endDay)
+            .OrderBy(x => x.StartDay.DayNumber)
+            .ToList();
+
+        if (dayIntervals.Count == 0)
+            throw new ConflictException("Accommodation is not available for the selected dates.");
+
+        var points = new List<DateOnly> { startDay, endDay };
+        foreach (var it in dayIntervals)
+        {
+            if (it.StartDay > startDay && it.StartDay < endDay) points.Add(it.StartDay);
+            if (it.EndDay > startDay && it.EndDay < endDay) points.Add(it.EndDay);
+        }
+
+        points = points
+            .Distinct()
+            .OrderBy(x => x.DayNumber)
+            .ToList();
+
+        decimal total = 0m;
+
+        for (int i = 0; i < points.Count - 1; i++)
+        {
+            var segStart = points[i];
+            var segEnd = points[i + 1];
+
+            if (segEnd <= segStart)
+                continue;
+
+            var covering = dayIntervals.FirstOrDefault(a => a.StartDay <= segStart && a.EndDay >= segEnd);
+            if (covering is null)
+                throw new ConflictException("Accommodation is not available for the selected dates.");
+
+            var nights = segEnd.DayNumber - segStart.DayNumber;
+            if (nights <= 0)
+                continue;
+
+            var perNight = priceType == PriceType.PerGuest
+                ? covering.Price * guests
+                : covering.Price;
+
+            total += perNight * nights;
+        }
+
+        return total;
+    }
+
 
     public async Task<IReadOnlyList<HostAccommodationListItemDTO>> GetMyAsync(CancellationToken ct)
     {

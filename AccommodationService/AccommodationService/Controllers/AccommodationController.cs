@@ -16,7 +16,7 @@ public class AccommodationController(IAccommodationService accommodationService)
         await accommodationService.Create(request);
         return StatusCode(StatusCodes.Status201Created);
     }
-
+    
     [HttpGet("{id:guid}/reservation-info")]
     public async Task<ActionResult<AccommodationReservationInfoResponseDTO>> GetReservationInfo(
         [FromRoute] Guid id,

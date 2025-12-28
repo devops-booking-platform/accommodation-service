@@ -46,7 +46,7 @@ public class AvailabilityControllerTests : IClassFixture<CustomWebApplicationFac
         return db.Set<Accommodation>().First(a => a.HostId == _testUserId).Id;
     }
 
-    private static readonly DateTimeOffset FixedNow = new(2025, 11, 30, 18, 0, 0, TimeSpan.Zero);
+    private static readonly DateOnly FixedNow = new(2025, 11, 30);
 
     [Fact]
     public async Task CreateOrUpdate_ShouldReturn200_WhenValidRequest()
@@ -165,7 +165,7 @@ public class AvailabilityControllerTests : IClassFixture<CustomWebApplicationFac
 
         // Fetch fresh entity to ensure changes persisted
         var updated = await db.Set<Availability>().FindAsync(availability.Id);
-        updated!.StartDate.Should().BeCloseTo(request.StartDate, TimeSpan.FromSeconds(1));
-        updated.EndDate.Should().BeCloseTo(request.EndDate, TimeSpan.FromSeconds(1));
+        updated!.StartDate.Should().Be(request.StartDate);
+        updated.EndDate.Should().Be(request.EndDate);
     }
 }

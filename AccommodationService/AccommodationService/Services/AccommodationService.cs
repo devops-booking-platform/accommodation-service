@@ -86,8 +86,8 @@ public class AccommodationService(
 
     public async Task<AccommodationReservationInfoResponseDTO> GetReservationInfoAsync(
         Guid accommodationId,
-        DateTimeOffset start,
-        DateTimeOffset end,
+        DateOnly start,
+        DateOnly end,
         int guests,
         CancellationToken ct = default)
     {
@@ -114,70 +114,46 @@ public class AccommodationService(
         );
     }
 
-    private static (DateTimeOffset StartUtc, DateTimeOffset EndUtc) NormalizeToUtcMidnights(
-        DateTimeOffset start,
-        DateTimeOffset end)
-    {
-        var startUtc = start.ToUniversalTime();
-        var endUtc = end.ToUniversalTime();
-
-        var startMidnightUtc = new DateTimeOffset(
-            startUtc.Year, startUtc.Month, startUtc.Day, 0, 0, 0, TimeSpan.Zero);
-
-        var endMidnightUtc = new DateTimeOffset(
-            endUtc.Year, endUtc.Month, endUtc.Day, 0, 0, 0, TimeSpan.Zero);
-
-        if (endMidnightUtc <= startMidnightUtc)
-            throw new ArgumentOutOfRangeException(nameof(end), "End date must be after start date.");
-
-        return (startMidnightUtc, endMidnightUtc);
-    }
-
     private async Task<decimal> CalculateTotalPriceAsync(
         Guid accommodationId,
         PriceType priceType,
-        DateTimeOffset start,
-        DateTimeOffset end,
+        DateOnly start,
+        DateOnly end,
         int guests,
         CancellationToken ct)
     {
         if (guests <= 0)
             throw new ArgumentOutOfRangeException(nameof(guests), "Guests must be positive.");
 
-        var (startUtc, endUtc) = NormalizeToUtcMidnights(start, end);
-
         var intervals = await availabilityRepository.Query()
             .AsNoTracking()
             .Where(a => a.AccommodationId == accommodationId)
-            .Where(a => a.EndDate > startUtc && a.StartDate < endUtc) 
+            .Where(a => a.EndDate > start && a.StartDate < end) 
             .Select(a => new { a.StartDate, a.EndDate, a.Price })
             .ToListAsync(ct);
 
         if (intervals.Count == 0)
             throw new ConflictException("Accommodation is not available for the selected dates.");
 
-        var startDay = DateOnly.FromDateTime(startUtc.UtcDateTime);
-        var endDay = DateOnly.FromDateTime(endUtc.UtcDateTime);
-
         var dayIntervals = intervals
             .Select(x => new
             {
-                StartDay = DateOnly.FromDateTime(x.StartDate.UtcDateTime),
-                EndDay = DateOnly.FromDateTime(x.EndDate.UtcDateTime),
+                StartDay = x.StartDate,
+                EndDay = x.EndDate,
                 x.Price
             })
-            .Where(x => x.EndDay > startDay && x.StartDay < endDay)
+            .Where(x => x.EndDay > start && x.StartDay < end)
             .OrderBy(x => x.StartDay.DayNumber)
             .ToList();
 
         if (dayIntervals.Count == 0)
             throw new ConflictException("Accommodation is not available for the selected dates.");
 
-        var points = new List<DateOnly> { startDay, endDay };
+        var points = new List<DateOnly> { start, end };
         foreach (var it in dayIntervals)
         {
-            if (it.StartDay > startDay && it.StartDay < endDay) points.Add(it.StartDay);
-            if (it.EndDay > startDay && it.EndDay < endDay) points.Add(it.EndDay);
+            if (it.StartDay > start && it.StartDay < end) points.Add(it.StartDay);
+            if (it.EndDay > start && it.EndDay < end) points.Add(it.EndDay);
         }
 
         points = points

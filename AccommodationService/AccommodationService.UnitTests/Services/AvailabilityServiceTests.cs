@@ -17,7 +17,6 @@ public class AvailabilityServiceTests
     private readonly Mock<ICurrentUserService> _currentUserServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IEventBus> _eventBusMock;
-
     private readonly AvailabilityService _service;
 
     public AvailabilityServiceTests()
@@ -36,6 +35,7 @@ public class AvailabilityServiceTests
             _eventBusMock.Object
         );
     }
+    private static DateOnly TodayUtc() => DateOnly.FromDateTime(DateTime.UtcNow);
 
     [Fact]
     public async Task CreateOrUpdate_ShouldThrow_WhenUserNotAuthenticated()
@@ -85,8 +85,8 @@ public class AvailabilityServiceTests
         {
             Id = Guid.NewGuid(),
             AccommodationId = accommodation.Id,
-            StartDate = DateTime.UtcNow.AddDays(1),
-            EndDate = DateTime.UtcNow.AddDays(5)
+            StartDate = TodayUtc().AddDays(1),
+            EndDate = TodayUtc().AddDays(5)
         };
 
         var availabilities = new List<Availability> { existing }.AsAsyncQueryable();
@@ -95,8 +95,8 @@ public class AvailabilityServiceTests
         var request = new AvailabilityRequest
         {
             AccommodationId = accommodation.Id,
-            StartDate = DateTime.UtcNow.AddDays(3), // overlaps
-            EndDate = DateTime.UtcNow.AddDays(6)
+            StartDate = TodayUtc().AddDays(3), // overlaps
+            EndDate = TodayUtc().AddDays(6)
         };
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => _service.CreateOrUpdate(request));
@@ -116,8 +116,8 @@ public class AvailabilityServiceTests
         var request = new AvailabilityRequest
         {
             AccommodationId = accommodation.Id,
-            StartDate = DateTime.UtcNow,
-            EndDate = DateTime.UtcNow.AddDays(3)
+            StartDate = TodayUtc(),
+            EndDate = TodayUtc().AddDays(3)
         };
 
         await _service.CreateOrUpdate(request);
@@ -144,8 +144,8 @@ public class AvailabilityServiceTests
         {
             Id = Guid.NewGuid(),
             AccommodationId = accommodation.Id,
-            StartDate = DateTime.UtcNow,
-            EndDate = DateTime.UtcNow.AddDays(3),
+            StartDate = TodayUtc(),
+            EndDate = TodayUtc().AddDays(3),
             Price = 50
         };
         _availabilityRepoMock.Setup(x => x.GetByIdAsync(existing.Id)).ReturnsAsync(existing);
@@ -155,15 +155,15 @@ public class AvailabilityServiceTests
         {
             Id = existing.Id,
             AccommodationId = accommodation.Id,
-            StartDate = DateTime.UtcNow.AddDays(1),
-            EndDate = DateTime.UtcNow.AddDays(4),
+            StartDate = TodayUtc().AddDays(1),
+            EndDate = TodayUtc().AddDays(4),
             Price = 100
         };
 
         await _service.CreateOrUpdate(request);
 
-        existing.StartDate.Should().BeCloseTo(request.StartDate, TimeSpan.FromSeconds(1));
-        existing.EndDate.Should().BeCloseTo(request.EndDate, TimeSpan.FromSeconds(1));
+        existing.StartDate.Should().Be(request.StartDate);
+        existing.EndDate.Should().Be(request.EndDate);
         existing.Price.Should().Be(request.Price);
 
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

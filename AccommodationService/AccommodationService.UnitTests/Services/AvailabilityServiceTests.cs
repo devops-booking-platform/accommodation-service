@@ -17,7 +17,6 @@ public class AvailabilityServiceTests
     private readonly Mock<ICurrentUserService> _currentUserServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IEventBus> _eventBusMock;
-
     private readonly AvailabilityService _service;
 
     public AvailabilityServiceTests()
@@ -37,7 +36,6 @@ public class AvailabilityServiceTests
         );
     }
     private static DateOnly TodayUtc() => DateOnly.FromDateTime(DateTime.UtcNow);
-
 
     [Fact]
     public async Task CreateOrUpdate_ShouldThrow_WhenUserNotAuthenticated()

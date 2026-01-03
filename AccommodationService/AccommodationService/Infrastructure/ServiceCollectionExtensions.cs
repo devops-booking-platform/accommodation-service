@@ -1,5 +1,6 @@
 ﻿using AccommodationService.Common.Events;
 using AccommodationService.Common.Events.Received;
+using AccommodationService.Domain.Mappings;
 using AccommodationService.IntegrationEvents.Handlers;
 using AccommodationService.Repositories;
 using AccommodationService.Repositories.Interfaces;
@@ -28,6 +29,7 @@ public static class ServiceCollectionExtensions
 
         services.AddHostedService<IntegrationEventsSubscriber>();
         services.AddSingleton<IEventBus, RabbitMqEventBus>();
+        services.AddAutoMapper(cfg => cfg.AddProfile<AccommodationMappingProfile>());
 
         return services;
     }

@@ -6,6 +6,7 @@ using AccommodationService.Domain.Entities;
 using AccommodationService.Domain.Enums;
 using AccommodationService.Repositories.Interfaces;
 using AccommodationService.Services.Interfaces;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 
 namespace AccommodationService.Services;
@@ -17,6 +18,7 @@ public class AccommodationService(
     IRepository<Availability> availabilityRepository,
     ICurrentUserService currentUserService,
     IUnitOfWork unitOfWork,
+    IMapper mapper,
     IEventBus eventBus
 ) : IAccommodationService
 {
@@ -28,7 +30,7 @@ public class AccommodationService(
 
         var accommodation = Accommodation.Create(request, userId.Value);
 
-        await GetAmenities(request, accommodation);
+        await GetAmenitiesForAccommodation(request, accommodation);
 
         var photos = CreatePhotos(request, accommodation);
 
@@ -75,7 +77,7 @@ public class AccommodationService(
             .Select(photo => Photo.Create(photo, accommodation.Id))
             .ToList();
 
-    private async Task GetAmenities(AccommodationRequest request, Accommodation accommodation)
+    private async Task GetAmenitiesForAccommodation(AccommodationRequest request, Accommodation accommodation)
     {
         var amenities = await amenityRepository.Query()
             .Where(x => request.Amenities.Contains(x.Id))
@@ -83,8 +85,34 @@ public class AccommodationService(
 
         accommodation.Amenities = amenities;
     }
+    
+    public async Task<GetAccommodationResponse> Get(Guid id, CancellationToken ct)
+    {
+        var accommodation = await accommodationRepository.Query()
+            .Where(x => x.Id == id)
+            .Include(a => a.Location)
+            .Include(a => a.Photos)
+            .Include(a => a.Amenities)
+            .Include(a => a.Availabilities)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(ct);
 
-    public async Task<AccommodationReservationInfoResponseDTO> GetReservationInfoAsync(
+        if (accommodation is null)
+        {
+            throw new NotFoundException("Accommodation not found.");
+        }
+
+        return mapper.Map<GetAccommodationResponse>(accommodation);
+    }
+
+    public async Task<ICollection<AmenityResponseDto>> GetAmenities(CancellationToken ct)
+    {
+        var amenities = await amenityRepository.Query()
+            .ToListAsync(ct);
+        return mapper.Map<ICollection<AmenityResponseDto>>(amenities);
+    }
+
+    public async Task<AccommodationReservationInfoResponseDto> GetReservationInfoAsync(
         Guid accommodationId,
         DateOnly start,
         DateOnly end,
@@ -105,7 +133,7 @@ public class AccommodationService(
 
         var totalPrice = await CalculateTotalPriceAsync(accommodationId, accommodation.PriceType, start, end, guests, ct);
 
-        return new AccommodationReservationInfoResponseDTO(
+        return new AccommodationReservationInfoResponseDto(
             Name: accommodation.Name,
             HostId: accommodation.HostId,
             MaxGuests: accommodation.MaximumNumberOfGuests,
@@ -190,7 +218,7 @@ public class AccommodationService(
     }
 
 
-    public async Task<IReadOnlyList<HostAccommodationListItemDTO>> GetMyAsync(CancellationToken ct)
+    public async Task<IReadOnlyList<HostAccommodationListItemDto>> GetMyAsync(CancellationToken ct)
     {
         var userId = currentUserService.UserId;
         if (!userId.HasValue)
@@ -198,7 +226,7 @@ public class AccommodationService(
 
         return await accommodationRepository.Query()
             .Where(x => x.HostId == userId.Value)
-            .Select(x => new HostAccommodationListItemDTO
+            .Select(x => new HostAccommodationListItemDto
             {
                 Id = x.Id,
                 Name = x.Name,

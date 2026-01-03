@@ -4,6 +4,7 @@ using AccommodationService.Domain.Entities;
 using AccommodationService.Domain.Enums;
 using AccommodationService.Repositories.Interfaces;
 using AccommodationService.Services.Interfaces;
+using AutoMapper;
 using Moq;
 
 namespace AccommodationService.UnitTests.Services;
@@ -17,6 +18,7 @@ public class AccommodationServiceTests
     private readonly Mock<ICurrentUserService> _currentUserServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IEventBus> _eventBusMock;
+    private readonly Mock<IMapper> _mapper;
 
     private readonly AccommodationService.Services.AccommodationService _service;
 
@@ -29,6 +31,7 @@ public class AccommodationServiceTests
         _currentUserServiceMock = new Mock<ICurrentUserService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _eventBusMock = new Mock<IEventBus>();
+        _mapper = new Mock<IMapper>();
 
 
         _service = new AccommodationService.Services.AccommodationService(
@@ -38,6 +41,7 @@ public class AccommodationServiceTests
 			_availabilityRepoMock.Object,
             _currentUserServiceMock.Object,
             _unitOfWorkMock.Object,
+            _mapper.Object,
             _eventBusMock.Object
         );
     }

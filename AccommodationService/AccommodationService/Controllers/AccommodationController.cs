@@ -18,7 +18,7 @@ public class AccommodationController(IAccommodationService accommodationService)
     }
     
     [HttpGet("{id:guid}/reservation-info")]
-    public async Task<ActionResult<AccommodationReservationInfoResponseDTO>> GetReservationInfo(
+    public async Task<ActionResult<AccommodationReservationInfoResponseDto>> GetReservationInfo(
         [FromRoute] Guid id,
         [FromQuery] DateOnly start,
         [FromQuery] DateOnly end,
@@ -35,5 +35,19 @@ public class AccommodationController(IAccommodationService accommodationService)
 	{
 		var list = await accommodationService.GetMyAsync(ct);
 		return Ok(list);
+	}
+	
+	[HttpGet("{id:guid}")]
+	public async Task<ActionResult<GetAccommodationResponse>> GetAccommodationInfo(Guid id, CancellationToken ct)
+	{
+		var dto = await accommodationService.Get(id, ct);
+		return Ok(dto);
+	}
+	
+	[HttpGet("amenities")]
+	public async Task<ActionResult<AmenityResponseDto>> GetAmenities(CancellationToken ct)
+	{
+		var dto = await accommodationService.GetAmenities(ct);
+		return Ok(dto);
 	}
 }

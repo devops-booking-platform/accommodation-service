@@ -1,11 +1,10 @@
-﻿namespace AccommodationService.Domain.DTOs
+﻿namespace AccommodationService.Domain.DTOs;
+
+public sealed class HostAccommodationListItemDto
 {
-	public sealed class HostAccommodationListItemDTO
-	{
-		public Guid Id { get; init; }
-		public string Name { get; init; } = default!;
-		public string Address { get; init; } = default!;
-		public int MinGuests { get; init; }
-		public int MaxGuests { get; init; }
-	}
+    public Guid Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string Address { get; init; } = string.Empty;
+    public int MinGuests { get; init; }
+    public int MaxGuests { get; init; }
 }

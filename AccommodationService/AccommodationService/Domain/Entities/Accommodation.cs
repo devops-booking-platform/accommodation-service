@@ -42,4 +42,19 @@ public class Accommodation : EntityWithGuidId
 
         return accommodation;
     }
+
+    public void Update(AccommodationRequest request)
+    {
+        Name = request.Name;
+        Description = request.Description;
+        IsAutoConfirm = request.IsAutoConfirm;
+        MinimumNumberOfGuests = request.MinimumNumberOfGuests;
+        MaximumNumberOfGuests = request.MaximumNumberOfGuests;
+        PriceType = request.PriceType;
+    }
+
+    public void RemoveAmenities()
+    {
+        Amenities.Clear();
+    }
 }

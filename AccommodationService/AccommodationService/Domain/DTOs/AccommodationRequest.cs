@@ -6,6 +6,7 @@ namespace AccommodationService.Domain.DTOs;
 
 public class AccommodationRequest
 {
+    public Guid? Id { get; set; }
     [Required]
     [MaxLength(Accommodation.NameMaxLength)]
     public string Name { get; set; } = string.Empty;

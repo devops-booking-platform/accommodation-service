@@ -52,6 +52,46 @@ public class AccommodationService(
         await eventBus.PublishAsync(@event);
     }
 
+    public async Task Update(AccommodationRequest request)
+    {
+        var userId = currentUserService.UserId;
+
+        if (!userId.HasValue || !request.Id.HasValue)
+            throw new UnauthorizedAccessException("You don't have access to this action.");
+
+        var accommodation = await GetAccommodation(request.Id.Value, CancellationToken.None);
+
+        var location = accommodation.Location;
+        location?.Update(request.Location);
+
+        accommodation.RemoveAmenities();
+        await GetAmenitiesForAccommodation(request, accommodation);
+
+        foreach (var photo in accommodation.Photos)
+        {
+            photoRepository.Remove(photo);
+        }
+
+        var photos = CreatePhotos(request, accommodation);
+        accommodation.Update(request);
+
+        await photoRepository.AddRangeAsync(photos);
+
+        await unitOfWork.SaveChangesAsync();
+
+        var @event = new AccommodationUpdatedIntegrationEvent(
+            accommodation.Id,
+            accommodation.Name,
+            accommodation.MaximumNumberOfGuests,
+            accommodation.MinimumNumberOfGuests,
+            MapAmenities(accommodation),
+            MapLocation(accommodation),
+            accommodation.PriceType
+        );
+
+        await eventBus.PublishAsync(@event);
+    }
+
     private static LocationDTO? MapLocation(Accommodation accommodation)
         => accommodation.Location is null
             ? null
@@ -85,8 +125,15 @@ public class AccommodationService(
 
         accommodation.Amenities = amenities;
     }
-    
+
     public async Task<GetAccommodationResponse> Get(Guid id, CancellationToken ct)
+    {
+        var accommodation = await GetAccommodation(id, ct);
+
+        return mapper.Map<GetAccommodationResponse>(accommodation);
+    }
+
+    private async Task<Accommodation> GetAccommodation(Guid id, CancellationToken ct)
     {
         var accommodation = await accommodationRepository.Query()
             .Where(x => x.Id == id)
@@ -96,13 +143,12 @@ public class AccommodationService(
             .Include(a => a.Availabilities)
             .AsSplitQuery()
             .FirstOrDefaultAsync(ct);
-
         if (accommodation is null)
         {
             throw new NotFoundException("Accommodation not found.");
         }
 
-        return mapper.Map<GetAccommodationResponse>(accommodation);
+        return accommodation;
     }
 
     public async Task<ICollection<AmenityResponseDto>> GetAmenities(CancellationToken ct)
@@ -126,12 +172,13 @@ public class AccommodationService(
             throw new ArgumentOutOfRangeException(nameof(guests), "Guests must be positive.");
 
         var accommodation = await accommodationRepository.GetByIdAsync(accommodationId)
-            ?? throw new NotFoundException("Accommodation not found.");
+                            ?? throw new NotFoundException("Accommodation not found.");
 
         if (guests > accommodation.MaximumNumberOfGuests)
             throw new ConflictException("Guests exceed max capacity.");
 
-        var totalPrice = await CalculateTotalPriceAsync(accommodationId, accommodation.PriceType, start, end, guests, ct);
+        var totalPrice =
+            await CalculateTotalPriceAsync(accommodationId, accommodation.PriceType, start, end, guests, ct);
 
         return new AccommodationReservationInfoResponseDto(
             Name: accommodation.Name,
@@ -156,7 +203,7 @@ public class AccommodationService(
         var intervals = await availabilityRepository.Query()
             .AsNoTracking()
             .Where(a => a.AccommodationId == accommodationId)
-            .Where(a => a.EndDate > start && a.StartDate < end) 
+            .Where(a => a.EndDate > start && a.StartDate < end)
             .Select(a => new { a.StartDate, a.EndDate, a.Price })
             .ToListAsync(ct);
 
@@ -241,12 +288,11 @@ public class AccommodationService(
 
     public async Task DeleteHostAccommodationsAsync(Guid hostId, CancellationToken ct)
     {
-
         var accommodationIds = await accommodationRepository
-        .Query()
-        .Where(a => a.HostId == hostId)
-        .Select(a => a.Id)
-        .ToListAsync(ct);
+            .Query()
+            .Where(a => a.HostId == hostId)
+            .Select(a => a.Id)
+            .ToListAsync(ct);
 
         if (accommodationIds.Count == 0)
             return;

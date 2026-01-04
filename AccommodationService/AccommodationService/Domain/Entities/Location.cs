@@ -23,4 +23,12 @@ public class Location : EntityWithGuidId
             Address = request.Address,
             PostalCode = request.PostalCode
         };
+
+    public void Update(LocationRequest request)
+    {
+        Country = request.Country;
+        City = request.City;
+        Address = request.Address;
+        PostalCode = request.PostalCode;
+    }
 }

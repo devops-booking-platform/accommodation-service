@@ -17,6 +17,14 @@ public class AccommodationController(IAccommodationService accommodationService)
         return StatusCode(StatusCodes.Status201Created);
     }
     
+    [HttpPut]
+    [Authorize(Roles = "Host")]
+    public async Task<IActionResult> Update([FromBody] AccommodationRequest request)
+    {
+	    await accommodationService.Update(request);
+	    return StatusCode(StatusCodes.Status204NoContent);
+    }
+    
     [HttpGet("{id:guid}/reservation-info")]
     public async Task<ActionResult<AccommodationReservationInfoResponseDto>> GetReservationInfo(
         [FromRoute] Guid id,

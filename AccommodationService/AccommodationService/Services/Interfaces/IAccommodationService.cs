@@ -4,7 +4,8 @@ namespace AccommodationService.Services.Interfaces;
 
 public interface IAccommodationService
 {
-    Task Create(AccommodationRequest request);
+	Task Create(AccommodationRequest request);
+    Task Update(AccommodationRequest request);
     Task DeleteHostAccommodationsAsync(Guid userId, CancellationToken ct);
     Task<IReadOnlyList<HostAccommodationListItemDto>> GetMyAsync(CancellationToken ct);
     Task<GetAccommodationResponse> Get(Guid id, CancellationToken ct);

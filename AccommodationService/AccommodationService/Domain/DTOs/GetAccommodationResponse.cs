@@ -5,6 +5,7 @@ namespace AccommodationService.Domain.DTOs;
 public class GetAccommodationResponse
 {
     public Guid Id { get; set; }
+    public Guid HostId { get; set; }
 
     public string Name { get; set; } = string.Empty;
 

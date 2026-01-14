@@ -11,6 +11,7 @@ public class AccommodationMappingProfile : Profile
         // Accommodation -> AccommodationResponseDTO
         CreateMap<Accommodation, GetAccommodationResponse>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.HostId, opt => opt.MapFrom(src => src.HostId))
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
             .ForMember(dest => dest.IsAutoConfirm, opt => opt.MapFrom(src => src.IsAutoConfirm))

@@ -132,4 +132,243 @@ public class AccommodationServiceTests
             a.Amenities.First().Id == amenity2.Id
         )), Times.Once);
     }
+
+    [Fact]
+    public async Task Update_ShouldThrow_WhenUserNotAuthenticated()
+    {
+        // Arrange
+        _currentUserServiceMock.Setup(x => x.UserId).Returns((Guid?)null);
+        var request = new AccommodationRequest();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _service.Update(request));
+    }
+
+    [Fact]
+    public async Task Update_ShouldThrow_WhenIdNotProvided()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
+        var request = new AccommodationRequest { Id = null };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _service.Update(request));
+    }
+    
+    [Fact]
+    public async Task GetReservationInfoAsync_ShouldThrow_WhenEndDateBeforeStartDate()
+    {
+        // Arrange
+        var accommodationId = Guid.NewGuid();
+        var start = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(5));
+        var end = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => 
+            _service.GetReservationInfoAsync(accommodationId, start, end, 2, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetReservationInfoAsync_ShouldThrow_WhenGuestsNotPositive()
+    {
+        // Arrange
+        var accommodationId = Guid.NewGuid();
+        var start = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+        var end = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(5));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => 
+            _service.GetReservationInfoAsync(accommodationId, start, end, 0, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetReservationInfoAsync_ShouldThrow_WhenAccommodationNotFound()
+    {
+        // Arrange
+        var accommodationId = Guid.NewGuid();
+        var start = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+        var end = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(5));
+
+        _accommodationRepoMock.Setup(x => x.GetByIdAsync(accommodationId))
+            .ReturnsAsync((Accommodation?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Common.Exceptions.NotFoundException>(() => 
+            _service.GetReservationInfoAsync(accommodationId, start, end, 2, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetReservationInfoAsync_ShouldThrow_WhenGuestsExceedMaxCapacity()
+    {
+        // Arrange
+        var accommodationId = Guid.NewGuid();
+        var start = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+        var end = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(5));
+
+        var accommodation = new Accommodation 
+        { 
+            Id = accommodationId, 
+            MaximumNumberOfGuests = 4 
+        };
+
+        _accommodationRepoMock.Setup(x => x.GetByIdAsync(accommodationId))
+            .ReturnsAsync(accommodation);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Common.Exceptions.ConflictException>(() => 
+            _service.GetReservationInfoAsync(accommodationId, start, end, 5, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetReservationInfoAsync_ShouldCalculatePrice_WhenAvailabilityExists()
+    {
+        // Arrange
+        var accommodationId = Guid.NewGuid();
+        var start = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+        var end = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(4));
+
+        var accommodation = new Accommodation 
+        { 
+            Id = accommodationId,
+            Name = "Test Hotel",
+            HostId = Guid.NewGuid(),
+            MaximumNumberOfGuests = 4,
+            IsAutoConfirm = true,
+            PriceType = PriceType.PerUnit
+        };
+
+        var availability = new Availability
+        {
+            Id = Guid.NewGuid(),
+            AccommodationId = accommodationId,
+            StartDate = start,
+            EndDate = end,
+            Price = 100m
+        };
+
+        _accommodationRepoMock.Setup(x => x.GetByIdAsync(accommodationId))
+            .ReturnsAsync(accommodation);
+
+        _availabilityRepoMock.Setup(x => x.Query())
+            .Returns(new List<Availability> { availability }.AsAsyncQueryable());
+
+        // Act
+        var result = await _service.GetReservationInfoAsync(accommodationId, start, end, 2, CancellationToken.None);
+
+        // Assert
+        Assert.Equal("Test Hotel", result.Name);
+        Assert.Equal(accommodation.HostId, result.HostId);
+        Assert.Equal(300m, result.TotalPrice); // 3 nights * 100
+    }
+
+    [Fact]
+    public async Task GetReservationInfoAsync_ShouldCalculatePricePerGuest_WhenPriceTypeIsPerGuest()
+    {
+        // Arrange
+        var accommodationId = Guid.NewGuid();
+        var start = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
+        var end = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3));
+
+        var accommodation = new Accommodation 
+        { 
+            Id = accommodationId,
+            Name = "Test Hotel",
+            HostId = Guid.NewGuid(),
+            MaximumNumberOfGuests = 4,
+            IsAutoConfirm = true,
+            PriceType = PriceType.PerGuest
+        };
+
+        var availability = new Availability
+        {
+            Id = Guid.NewGuid(),
+            AccommodationId = accommodationId,
+            StartDate = start,
+            EndDate = end,
+            Price = 50m
+        };
+
+        _accommodationRepoMock.Setup(x => x.GetByIdAsync(accommodationId))
+            .ReturnsAsync(accommodation);
+
+        _availabilityRepoMock.Setup(x => x.Query())
+            .Returns(new List<Availability> { availability }.AsAsyncQueryable());
+
+        // Act
+        var result = await _service.GetReservationInfoAsync(accommodationId, start, end, 2, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(200m, result.TotalPrice); // 2 nights * 50 * 2 guests
+    }
+
+    [Fact]
+    public async Task GetMyAsync_ShouldThrow_WhenUserNotAuthenticated()
+    {
+        // Arrange
+        _currentUserServiceMock.Setup(x => x.UserId).Returns((Guid?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _service.GetMyAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetMyAsync_ShouldReturnHostAccommodations()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
+
+        var accommodations = new List<Accommodation>
+        {
+            new Accommodation 
+            { 
+                Id = Guid.NewGuid(), 
+                Name = "Hotel 1", 
+                HostId = userId,
+                MinimumNumberOfGuests = 1,
+                MaximumNumberOfGuests = 4,
+                Location = new Location { City = "Seattle", Country = "USA", Address = "123 Main St" }
+            },
+            new Accommodation 
+            { 
+                Id = Guid.NewGuid(), 
+                Name = "Hotel 2", 
+                HostId = userId,
+                MinimumNumberOfGuests = 2,
+                MaximumNumberOfGuests = 6,
+                Location = null
+            }
+        };
+
+        _accommodationRepoMock.Setup(x => x.Query())
+            .Returns(accommodations.AsAsyncQueryable());
+
+        // Act
+        var result = await _service.GetMyAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Equal("Hotel 1", result[0].Name);
+        Assert.Equal("Seattle, USA, 123 Main St", result[0].Address);
+        Assert.Equal("", result[1].Address);
+    }
+
+    [Fact]
+    public async Task DeleteHostAccommodationsAsync_ShouldNotPublishEvent_WhenNoAccommodations()
+    {
+        // Arrange
+        var hostId = Guid.NewGuid();
+
+        _accommodationRepoMock.Setup(x => x.Query())
+            .Returns(new List<Accommodation>().AsAsyncQueryable());
+
+        // Act
+        await _service.DeleteHostAccommodationsAsync(hostId, CancellationToken.None);
+
+        // Assert
+        _eventBusMock.Verify(x => x.PublishAsync(
+            It.IsAny<Common.Events.Published.HostAccommodationsDeletedIntegrationEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

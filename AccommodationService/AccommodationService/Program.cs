@@ -11,6 +11,7 @@ using OpenTelemetry.Trace;
 using Serilog;
 using System.Security.Claims;
 using System.Text;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((ctx, lc) => lc
@@ -24,6 +25,8 @@ var compositeTextMapPropagator = new CompositeTextMapPropagator(new TextMapPropa
 });
 Sdk.SetDefaultTextMapPropagator(compositeTextMapPropagator);
 var otlpEndpoint = builder.Configuration["OpenTelemetry:OtlpExporter:Endpoint"];
+
+builder.Services.AddHealthChecks();
 
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracing =>
@@ -100,6 +103,8 @@ if (!app.Environment.IsEnvironment("Test"))
     }
 }
 
+app.UseHttpMetrics();
+
 app.UseRouting();
 app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
@@ -113,6 +118,7 @@ app.UseCors("AllowOrigins");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapMetrics();
 app.MapGet("/health", () => "OK");
 app.Run();
 

@@ -11,6 +11,8 @@ using OpenTelemetry.Trace;
 using Serilog;
 using System.Security.Claims;
 using System.Text;
+using Prometheus;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((ctx, lc) => lc
@@ -24,6 +26,8 @@ var compositeTextMapPropagator = new CompositeTextMapPropagator(new TextMapPropa
 });
 Sdk.SetDefaultTextMapPropagator(compositeTextMapPropagator);
 var otlpEndpoint = builder.Configuration["OpenTelemetry:OtlpExporter:Endpoint"];
+
+builder.Services.AddHealthChecks();
 
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracing =>
@@ -44,7 +48,22 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<RabbitMqSettings>(builder.Configuration.GetSection("RabbitMq"));
+builder.Services.Configure<RedisSettings>(builder.Configuration.GetSection("Redis"));
+
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var redisSettings = builder.Configuration.GetSection("Redis").Get<RedisSettings>();
+    var options = new ConfigurationOptions
+    {
+        EndPoints = { $"{redisSettings!.Host}:{redisSettings.Port}" },
+        Password = redisSettings.Password,
+        AbortOnConnectFail = false
+    };
+
+    return ConnectionMultiplexer.Connect(options);
+});
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -99,6 +118,8 @@ if (!app.Environment.IsEnvironment("Test"))
         db.Database.Migrate();
     }
 }
+app.UseMiddleware<VisitorTrackingMiddleware>();
+app.UseHttpMetrics();
 
 app.UseRouting();
 app.UseExceptionHandler();
@@ -113,6 +134,7 @@ app.UseCors("AllowOrigins");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapMetrics();
 app.MapGet("/health", () => "OK");
 app.Run();
 
